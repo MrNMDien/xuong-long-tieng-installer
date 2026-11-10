@@ -91,7 +91,19 @@ try {
         $ngonNgu = [Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages | ForEach-Object { $_.LanguageTag }
         Write-Host "Có OCR: $($ngonNgu -join ', ')"
         if (-not ($ngonNgu | Where-Object { $_ -like "zh*" })) {
-            $canhBao.Add("Thiếu OCR tiếng Trung: Settings > Time & language > Language & region > thêm Chinese (Simplified), tích Optical character recognition.")
+            $cai = $false
+            if (-not $TuDong) {
+                $tl = Read-Host "Máy chưa có gói đọc chữ (OCR) tiếng Trung, bước Đọc sub phim Trung cần gói này. Cài luôn? (Windows hỏi quyền quản trị) [Y/n]"
+                $cai = ($tl -eq "" -or $tl -match "^[yYcC]")
+            }
+            if ($cai) {
+                try {
+                    Start-Process powershell -Verb RunAs -Wait -ArgumentList "-NoProfile -Command Add-WindowsCapability -Online -Name 'Language.OCR~~~zh-CN~0.0.1.0'"
+                    Write-Host "Đã chạy cài gói OCR tiếng Trung."
+                } catch { $canhBao.Add("Chưa cài được gói OCR tiếng Trung: vào Cài đặt > Lồng tiếng > Gói đọc chữ (OCR) trong app để cài.") }
+            } else {
+                $canhBao.Add("Thiếu OCR tiếng Trung: cài ở Cài đặt > Lồng tiếng > Gói đọc chữ (OCR) trong app (phim Trung vẫn chạy được bằng lời Whisper).")
+            }
         }
     } catch { $canhBao.Add("Không kiểm được gói OCR của Windows.") }
 
