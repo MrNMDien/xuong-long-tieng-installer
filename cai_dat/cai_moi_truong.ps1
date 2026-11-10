@@ -102,7 +102,7 @@ try {
                     Write-Host "Đã chạy cài gói OCR tiếng Trung."
                 } catch { $canhBao.Add("Chưa cài được gói OCR tiếng Trung: vào Cài đặt > Lồng tiếng > Gói đọc chữ (OCR) trong app để cài.") }
             } else {
-                $canhBao.Add("Thiếu OCR tiếng Trung: cài ở Cài đặt > Lồng tiếng > Gói đọc chữ (OCR) trong app (phim Trung vẫn chạy được bằng lời Whisper).")
+                $canhBao.Add("Thiếu OCR tiếng Trung: phim Trung sẽ dừng ở bước Đọc sub. Cài ở Cài đặt > Lồng tiếng > Gói đọc chữ (OCR) trong app.")
             }
         }
     } catch { $canhBao.Add("Không kiểm được gói OCR của Windows.") }
