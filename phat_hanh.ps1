@@ -16,8 +16,11 @@ if (G $Xuong status --porcelain --untracked-files=no) { throw "Repo Xưởng cò
 $m = Select-String -Path (Join-Path $Xuong "xuong\__init__.py") -Pattern 'PHIEN_BAN\s*=.*"([0-9]+\.[0-9]+\.[0-9]+)"'
 $ver = $m.Matches[0].Groups[1].Value
 $tag = "v$ver"
-& gh release view $tag -R $Repo *> $null
-if ($LASTEXITCODE -eq 0) { throw "Bản $ver đã phát hành: tăng PHIEN_BAN và thêm mục vào cap_nhat.json." }
+$ErrorActionPreference = "Continue"  # gh in "release not found" ra stderr: là kết quả mong đợi, không phải lỗi
+& gh release view $tag -R $Repo 2>$null | Out-Null
+$daCo = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+if ($daCo) { throw "Bản $ver đã phát hành: tăng PHIEN_BAN và thêm mục vào cap_nhat.json." }
 $ghiChu = (Get-Content (Join-Path $Xuong "xuong\tai_nguyen\cap_nhat.json") -Raw -Encoding UTF8 | ConvertFrom-Json) |
     Where-Object { $_.phien_ban -eq $ver } | Select-Object -First 1
 if (-not $ghiChu) { throw "cap_nhat.json chưa có mục cho bản $ver." }
