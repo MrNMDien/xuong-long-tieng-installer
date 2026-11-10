@@ -108,7 +108,8 @@ try {
     if ($khoa) { $canhBao.Add("Chưa có GEMINI_API_KEY: điền khóa vào $envTep để dịch.") }
 
     Buoc "Kiểm nhanh"
-    Chay "Nạp mã Xưởng" { & $py -c "import xuong, xuong.app, xuong.crawl; print('Xưởng', xuong.PHIEN_BAN, '+ CrawlTool', xuong.crawl.ct.APP_VERSION)" }
+    Push-Location $ThuMucApp  # Python tìm gói xuong theo thư mục hiện hành: phải đứng trong thư mục app
+    try { Chay "Nạp mã Xưởng" { & $py -c "import xuong, xuong.app, xuong.crawl; print('Xưởng', xuong.PHIEN_BAN, '+ CrawlTool', xuong.crawl.ct.APP_VERSION)" } } finally { Pop-Location }
 
     Write-Host ""
     Write-Host "XONG. Mở app bằng biểu tượng Xưởng Lồng Tiếng trên Desktop." -ForegroundColor Green
