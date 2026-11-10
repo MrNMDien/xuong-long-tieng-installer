@@ -15,13 +15,13 @@
 #endif
 
 #define AppName "Xưởng Lồng Tiếng"
-#define AppIdGoc "{8C3E5D7A-4B21-4F0E-9A6C-2D1B7E9F4A10}"
+#define AppGuid "8C3E5D7A-4B21-4F0E-9A6C-2D1B7E9F4A10"
 #define Pyw "{app}\.venv\Scripts\pythonw.exe"
 #define Ico "{app}\xuong\tai_nguyen\XuongLongTieng.ico"
 #define Aumid "MongCanhTV.XuongLongTieng"
 
 [Setup]
-AppId={{#Copy(AppIdGoc, 2, 99)}
+AppId={{{#AppGuid}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion} ({#BuildSha})
@@ -89,7 +89,7 @@ var
 
 function DaCai: Boolean;
 begin
-  Result := RegKeyExists(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppIdGoc}_is1');
+  Result := RegKeyExists(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#AppGuid}' + '}_is1');
 end;
 
 function InitializeSetup: Boolean;
@@ -107,7 +107,7 @@ begin
     Exit;
   end;
 #endif
-  { App tự cập nhật: chờ cửa sổ app và máy chủ của nó thoát hẳn rồi mới chép mã mới. }
+  // App tự cập nhật: chờ cửa sổ app và máy chủ của nó thoát hẳn rồi mới chép mã mới.
   if Pos('/XLTCAPNHAT', Uppercase(GetCmdTail)) > 0 then
   begin
     i := 0;
@@ -124,7 +124,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   cu, moi: String;
 begin
-  { Bản cũ để uv.exe trong xuong\crawl (sẽ bị xóa khi chép mã mới): dời sang {app}\uv trước. }
+  // Bản cũ để uv.exe trong xuong\crawl (sẽ bị xóa khi chép mã mới): dời sang <app>\uv trước.
   if CurStep = ssInstall then
   begin
     cu := ExpandConstant('{app}\xuong\crawl\uv.exe');
