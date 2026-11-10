@@ -46,7 +46,8 @@ function DatKhoa([string]$tep, [string]$khoa, [string]$giaTri) {
 }
 
 try {
-    $uv = Join-Path $ThuMucApp "xuong\crawl\uv.exe"
+    $uv = @((Join-Path $ThuMucApp "uv\uv.exe"), (Join-Path $ThuMucApp "xuong\crawl\uv.exe")) | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $uv) { $uv = Join-Path $ThuMucApp "uv\uv.exe" }
     if (-not (Test-Path $uv)) { throw "Thiếu $uv (bộ cài hỏng?)" }
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $ThuMucApp "python"
     $env:UV_LINK_MODE = "copy"

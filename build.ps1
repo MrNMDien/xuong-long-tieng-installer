@@ -44,7 +44,8 @@ G $MediaCrawler archive --format=zip --prefix=MediaCrawler/ -o (Join-Path $crawl
 [IO.File]::WriteAllText((Join-Path $crawl "base.sha"), (G $MediaCrawler rev-parse HEAD).Trim())
 $uv = (Get-Command uv -ErrorAction SilentlyContinue).Source
 if (-not $uv) { throw "Không thấy uv.exe trong PATH (cài: winget install astral-sh.uv)." }
-Copy-Item $uv (Join-Path $crawl "uv.exe")
+New-Item -ItemType Directory -Force (Join-Path $stage "uv") | Out-Null
+Copy-Item $uv (Join-Path $stage "uv\uv.exe")  # để riêng: file patch không chép đè/không xóa uv
 
 Copy-Item -Recurse (Join-Path $PSScriptRoot "cai_dat") (Join-Path $stage "cai_dat")
 
@@ -59,11 +60,14 @@ if (-not $Iscc) {
 }
 if (-not $Iscc) { throw "Không thấy Inno Setup 6 (cài: winget install JRSoftware.InnoSetup)." }
 
-Write-Host "==> Biên dịch bộ cài $ver ($sha)"
-& $Iscc "/Qp" "/DAppVersion=$ver" "/DBuildSha=$sha" "/DStage=$stage" (Join-Path $PSScriptRoot "setup.iss")
-if ($LASTEXITCODE) { throw "Inno Setup lỗi (mã $LASTEXITCODE)." }
-$exe = Get-ChildItem (Join-Path $PSScriptRoot "dist") -Filter "XuongLongTieng-Setup-$ver-$sha.exe" | Select-Object -First 1
-$sha = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
-[IO.File]::WriteAllText("$($exe.FullName).sha256", "sha256: $sha")
-Write-Host ("Xong: {0} ({1:N0} MB)" -f $exe.FullName, ($exe.Length / 1MB)) -ForegroundColor Green
-Write-Host "sha256: $sha  (dán dòng này vào ghi chú release để app kiểm khi tự cập nhật)"
+Write-Host "==> Biên dịch bộ cài $ver ($sha): file cài tổng + file patch"
+$kq = @()
+foreach ($loai in "Setup", "Patch") {
+    & $Iscc "/Qp" "/DAppVersion=$ver" "/DBuildSha=$sha" "/DLoai=$loai" "/DStage=$stage" (Join-Path $PSScriptRoot "setup.iss")
+    if ($LASTEXITCODE) { throw "Inno Setup lỗi khi build $loai (mã $LASTEXITCODE)." }
+    $exe = Get-Item (Join-Path $PSScriptRoot "dist\XuongLongTieng-$loai-$ver-$sha.exe")
+    $h = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+    Write-Host ("Xong {0}: {1} ({2:N0} MB) sha256 {3}" -f $loai, $exe.Name, ($exe.Length / 1MB), $h) -ForegroundColor Green
+    $kq += [pscustomobject]@{ Loai = $loai; Tep = $exe.FullName; Sha256 = $h }
+}
+$kq | ConvertTo-Json | Set-Content (Join-Path $PSScriptRoot "dist\ban-$ver-$sha.json") -Encoding UTF8
