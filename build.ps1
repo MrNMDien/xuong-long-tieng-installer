@@ -63,4 +63,7 @@ Write-Host "==> Biên dịch bộ cài $ver ($sha)"
 & $Iscc "/Qp" "/DAppVersion=$ver" "/DBuildSha=$sha" "/DStage=$stage" (Join-Path $PSScriptRoot "setup.iss")
 if ($LASTEXITCODE) { throw "Inno Setup lỗi (mã $LASTEXITCODE)." }
 $exe = Get-ChildItem (Join-Path $PSScriptRoot "dist") -Filter "XuongLongTieng-Setup-$ver-$sha.exe" | Select-Object -First 1
+$sha = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+[IO.File]::WriteAllText("$($exe.FullName).sha256", "sha256: $sha")
 Write-Host ("Xong: {0} ({1:N0} MB)" -f $exe.FullName, ($exe.Length / 1MB)) -ForegroundColor Green
+Write-Host "sha256: $sha  (dán dòng này vào ghi chú release để app kiểm khi tự cập nhật)"

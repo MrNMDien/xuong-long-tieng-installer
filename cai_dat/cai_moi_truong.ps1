@@ -4,7 +4,8 @@
 # - .env: tạo từ .env.example, chỉ điền XLT_MAY / XLT_DATA_DIR / VIENEU_PYTHON khi đang trống
 param(
     [Parameter(Mandatory = $true)][string]$ThuMucApp,
-    [string]$ThuMucPhim = ""
+    [string]$ThuMucPhim = "",
+    [switch]$TuDong   # app tự cập nhật: không hỏi, tự đóng cửa sổ
 )
 
 $ErrorActionPreference = "Stop"
@@ -113,14 +114,14 @@ try {
     if ($canhBao.Count) {
         Write-Host "Cần lưu ý:" -ForegroundColor Yellow
         $canhBao | ForEach-Object { Write-Host " - $_" -ForegroundColor Yellow }
-        Read-Host "Bấm Enter để đóng"
+        if ($TuDong) { Start-Sleep -Seconds 6 } else { Read-Host "Bấm Enter để đóng" }
     } else { Start-Sleep -Seconds 4 }
     exit 0
 } catch {
     Write-Host ""
     Write-Host "LỖI: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Sửa xong thì chạy lại: Start menu > Cài lại môi trường Xưởng." -ForegroundColor Red
-    Read-Host "Bấm Enter để đóng"
+    if ($TuDong) { Start-Sleep -Seconds 20 } else { Read-Host "Bấm Enter để đóng" }
     exit 1
 } finally {
     try { Stop-Transcript | Out-Null } catch {}

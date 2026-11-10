@@ -53,8 +53,11 @@ Name: "{userprograms}\Tìm phim (CrawlTool)"; Filename: "{#Pyw}"; Parameters: "-
 Name: "{userprograms}\Cài lại môi trường Xưởng"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"""; WorkingDir: "{app}"
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"""; StatusMsg: "Đang cài Python, thư viện, FFmpeg, VieNeu (lần đầu 10–30 phút, xem cửa sổ PowerShell)..."; Flags: waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"""; StatusMsg: "Đang cài Python, thư viện, FFmpeg, VieNeu (lần đầu 10–30 phút, xem cửa sổ PowerShell)..."; Flags: waituntilterminated; Check: not WizardSilent
+; Tự cập nhật (app chạy bộ cài với /VERYSILENT): cài môi trường không hỏi gì, rồi mở lại app
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"" -TuDong"; Flags: waituntilterminated; Check: WizardSilent
 Filename: "{#Pyw}"; Parameters: "-m xuong app"; WorkingDir: "{app}"; Description: "Mở {#AppName}"; Flags: postinstall nowait skipifsilent
+Filename: "{#Pyw}"; Parameters: "-m xuong app"; WorkingDir: "{app}"; Flags: nowait; Check: WizardSilent
 
 [UninstallDelete]
 ; Giữ lại .env (khóa API) và dữ liệu phim; xóa môi trường Python và mã.
@@ -67,6 +70,24 @@ Type: filesandordirs; Name: "{app}\cai_dat"
 [Code]
 var
   TrangDuLieu: TInputDirWizardPage;
+
+function InitializeSetup: Boolean;
+var
+  i: Integer;
+begin
+  { App tự cập nhật: chờ cửa sổ app và máy chủ của nó thoát hẳn rồi mới chép mã mới. }
+  if Pos('/XLTCAPNHAT', Uppercase(GetCmdTail)) > 0 then
+  begin
+    i := 0;
+    while (FindWindowByWindowName('{#AppName}') <> 0) and (i < 60) do
+    begin
+      Sleep(500);
+      i := i + 1;
+    end;
+    Sleep(3000);
+  end;
+  Result := True;
+end;
 
 procedure InitializeWizard;
 begin
