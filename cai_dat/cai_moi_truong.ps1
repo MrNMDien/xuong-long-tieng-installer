@@ -9,6 +9,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# Inno truyền "D:\" thành D:" (dấu \ cuối nuốt dấu nháy): bỏ nháy thừa, trả lại \ cho ổ gốc.
+$ThuMucPhim = $ThuMucPhim.Trim().TrimEnd('"')
+if ($ThuMucPhim -match '^[A-Za-z]:$') { $ThuMucPhim += '\' }
 $Host.UI.RawUI.WindowTitle = "Cài môi trường Xưởng Lồng Tiếng"
 $log = Join-Path $ThuMucApp "cai_dat\cai_dat.log"
 try { Start-Transcript -Path $log -Append | Out-Null } catch {}
@@ -51,6 +54,8 @@ try {
     if (-not (Test-Path $uv)) { throw "Thiếu $uv (bộ cài hỏng?)" }
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $ThuMucApp "python"
     $env:UV_LINK_MODE = "copy"
+    # Chỉ dùng Python do uv tải: Python lạ trong PATH (vd venv của hermes-agent) làm uv dừng với lỗi 448.
+    $env:UV_PYTHON_PREFERENCE = "only-managed"
 
     Buoc "Python 3.12 và môi trường .venv"
     $venv = Join-Path $ThuMucApp ".venv"
@@ -113,7 +118,7 @@ try {
     DatKhoa $envTep "XLT_MAY" "win"
     if ($ThuMucPhim) {
         DatKhoa $envTep "XLT_DATA_DIR" $ThuMucPhim
-        New-Item -ItemType Directory -Force $ThuMucPhim | Out-Null
+        if (-not (Test-Path -LiteralPath $ThuMucPhim)) { New-Item -ItemType Directory -Force $ThuMucPhim | Out-Null }  # New-Item -Force lỗi với gốc ổ (D:\)
     }
     DatKhoa $envTep "VIENEU_PYTHON" $vpy
     $khoa = Get-Content $envTep -Encoding UTF8 | Where-Object { $_ -match "^GEMINI_API_KEY=\s*$" }
