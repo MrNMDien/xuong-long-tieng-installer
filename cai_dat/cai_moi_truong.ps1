@@ -75,6 +75,9 @@ try {
     if (-not (Test-Path $uv)) { throw "Thiếu $uv (bộ cài hỏng?)" }
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $ThuMucApp "python"
     $env:UV_LINK_MODE = "copy"
+    # Bộ đệm gói đặt cạnh app (ổ đã chọn, thường là D) thay vì %LOCALAPPDATA% ổ C: PyTorch CUDA của VieNeu ~3 GB,
+    # cập nhật lần sau dùng lại không tải lại. Bản patch không đụng thư mục uv\.
+    if (-not $env:UV_CACHE_DIR) { $env:UV_CACHE_DIR = Join-Path $ThuMucApp "uv\cache" }
     # Chỉ dùng Python do uv tải: Python lạ trong PATH (vd venv của hermes-agent) làm uv dừng với lỗi 448.
     $env:UV_PYTHON_PREFERENCE = "only-managed"
 
@@ -122,6 +125,15 @@ try {
         else { $canhBao.Add("Chưa tải được Python $banCrawl cho CrawlTool: mở app bằng biểu tượng Desktop trước khi bấm Tìm phim.") }
     }
     Chay "Cài vieneu" { & $uv pip install --python $vpy vieneu }
+    if (CoLenh "nvidia-smi") {
+        # VieNeu đọc bằng card (PyTorch CUDA 12.8, ~3 GB): tóm tắt 216 đoạn trên CPU mất ~50 phút. Lỗi thì app vẫn đọc bằng CPU.
+        Buoc "VieNeu đọc bằng card đồ họa (GPU NVIDIA)"
+        try {
+            Chay "Cài VieNeu GPU" { & $uv pip install --python $vpy "vieneu[cuda]" --extra-index-url "https://download.pytorch.org/whl/cu128" --index-strategy unsafe-best-match }
+        } catch {
+            $canhBao.Add("Chưa cài được VieNeu chạy bằng card đồ họa: giọng Việt vẫn đọc bằng CPU (chậm hơn). $_")
+        }
+    }
 
     Buoc "FFmpeg"
     if (-not (CoLenh "ffmpeg") -or -not (CoLenh "ffprobe")) { CaiWinget "Gyan.FFmpeg" "FFmpeg" }
