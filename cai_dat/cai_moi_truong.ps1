@@ -37,14 +37,14 @@ function CaiWinget([string]$id, [string]$ten) {
 # Bộ cài Inno bật RedirectionGuard: tiến trình con không đi qua được junction do user tạo (lỗi 448
 # "untrusted mount point"). uv đặt Python ở cpython-3.12.X-... kèm junction cpython-3.12-... và venv của uv
 # luôn trỏ vào junction đó, nên venv tạo bằng "python -m venv" từ thư mục thật (pyvenv.cfg trỏ thẳng thư mục thật).
-function PythonThat {
-    Get-ChildItem (Join-Path $ThuMucApp "python") -Directory -Filter "cpython-3.12.*-windows-x86_64-none" -ErrorAction SilentlyContinue |
+function PythonThat([string]$ban = "3.12") {
+    Get-ChildItem (Join-Path $ThuMucApp "python") -Directory -Filter "cpython-$ban.*-windows-x86_64-none" -ErrorAction SilentlyContinue |
         Where-Object { -not $_.LinkType } |
         Sort-Object { [version]($_.Name -replace '^cpython-([0-9.]+)-.*$', '$1') } -Descending |
         Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName "python.exe" }
 }
 
-function TaoVenv([string]$thuMuc) {
+function TaoVenv([string]$thuMuc, [string]$pyGoc = $script:pyThat) {
     $cfg = Join-Path $thuMuc "pyvenv.cfg"
     if (Test-Path $cfg) {
         $nha = ((Get-Content $cfg | Where-Object { $_ -match '^home\s*=' }) -replace '^home\s*=\s*', '').Trim()
@@ -52,7 +52,7 @@ function TaoVenv([string]$thuMuc) {
         Write-Host "Tạo lại $thuMuc (venv cũ trỏ qua junction, bộ cài không chạy được)."
         Remove-Item -Recurse -Force $thuMuc
     }
-    Chay "Tạo $(Split-Path $thuMuc -Leaf)" { & $script:pyThat -m venv --without-pip $thuMuc }
+    Chay "Tạo $thuMuc" { & $pyGoc -m venv --without-pip $thuMuc }
 }
 
 function DatKhoa([string]$tep, [string]$khoa, [string]$giaTri) {
@@ -101,6 +101,26 @@ try {
     $vn = Join-Path $ThuMucApp "vieneu-env"
     $vpy = Join-Path $vn "Scripts\python.exe"
     TaoVenv $vn
+
+    # CrawlTool tự "uv sync" vào %LOCALAPPDATA%\CrawlTool\venv lần đầu mở. Nếu app được bộ cài mở (cuối cài đặt, sau tự
+    # cập nhật) thì uv tạo venv trỏ qua junction và CrawlTool lỗi 448, nên máy chưa có venv thì tạo sẵn từ Python thật
+    # đúng bản trong .python-version của base; uv sync dùng lại venv này. Venv đã có thì để nguyên (CrawlTool chỉ sync
+    # khi đổi base, xóa đi là mất thư viện).
+    $crawlVenv = Join-Path $env:LOCALAPPDATA "CrawlTool\venv"
+    $baseZip = Join-Path $ThuMucApp "xuong\crawl\base.zip"
+    if (-not (Test-Path (Join-Path $crawlVenv "pyvenv.cfg")) -and (Test-Path $baseZip)) {
+        Buoc "Python cho CrawlTool"
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $z = [IO.Compression.ZipFile]::OpenRead($baseZip)
+        try {
+            $e = $z.Entries | Where-Object { $_.FullName -match "^[^/]+/\.python-version$" } | Select-Object -First 1
+            $banCrawl = if ($e) { (New-Object IO.StreamReader($e.Open())).ReadToEnd().Trim() } else { "3.11" }
+        } finally { $z.Dispose() }
+        $pyCrawl = PythonThat $banCrawl
+        if (-not $pyCrawl) { & $uv python install $banCrawl; $pyCrawl = PythonThat $banCrawl }
+        if ($pyCrawl) { TaoVenv $crawlVenv $pyCrawl }
+        else { $canhBao.Add("Chưa tải được Python $banCrawl cho CrawlTool: mở app bằng biểu tượng Desktop trước khi bấm Tìm phim.") }
+    }
     Chay "Cài vieneu" { & $uv pip install --python $vpy vieneu }
 
     Buoc "FFmpeg"
