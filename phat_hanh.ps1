@@ -4,7 +4,8 @@
 # Chạy: powershell -ExecutionPolicy Bypass -File phat_hanh.ps1
 param(
     [string]$Xuong = (Join-Path $PSScriptRoot "..\xuong-long-tieng"),
-    [string]$Repo = "MrNMDien/xuong-long-tieng-installer"
+    [string]$Repo = "MrNMDien/xuong-long-tieng-installer",
+    [string]$MediaCrawler = ""  # trống = mặc định của build.ps1
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,7 +31,7 @@ $nhanh = (G $Xuong rev-parse --abbrev-ref HEAD).Trim()
 G $Xuong push origin $nhanh | Out-Null
 
 Write-Host "==> Build"
-& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build.ps1") -Xuong $Xuong
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "build.ps1") -Xuong $Xuong @(if ($MediaCrawler) { "-MediaCrawler", $MediaCrawler })
 if ($LASTEXITCODE) { throw "Build lỗi." }
 $sha = (G $Xuong rev-parse --short HEAD).Trim()
 $ban = Get-Content (Join-Path $PSScriptRoot "dist\ban-$ver-$sha.json") -Raw | ConvertFrom-Json
