@@ -34,6 +34,27 @@ function CaiWinget([string]$id, [string]$ten) {
     LamMoiPath
 }
 
+# Bộ cài Inno bật RedirectionGuard: tiến trình con không đi qua được junction do user tạo (lỗi 448
+# "untrusted mount point"). uv đặt Python ở cpython-3.12.X-... kèm junction cpython-3.12-... và venv của uv
+# luôn trỏ vào junction đó, nên venv tạo bằng "python -m venv" từ thư mục thật (pyvenv.cfg trỏ thẳng thư mục thật).
+function PythonThat {
+    Get-ChildItem (Join-Path $ThuMucApp "python") -Directory -Filter "cpython-3.12.*-windows-x86_64-none" -ErrorAction SilentlyContinue |
+        Where-Object { -not $_.LinkType } |
+        Sort-Object { [version]($_.Name -replace '^cpython-([0-9.]+)-.*$', '$1') } -Descending |
+        Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName "python.exe" }
+}
+
+function TaoVenv([string]$thuMuc) {
+    $cfg = Join-Path $thuMuc "pyvenv.cfg"
+    if (Test-Path $cfg) {
+        $nha = ((Get-Content $cfg | Where-Object { $_ -match '^home\s*=' }) -replace '^home\s*=\s*', '').Trim()
+        if ($nha -and (Test-Path -LiteralPath $nha) -and -not (Get-Item -LiteralPath $nha -Force).LinkType) { return }
+        Write-Host "Tạo lại $thuMuc (venv cũ trỏ qua junction, bộ cài không chạy được)."
+        Remove-Item -Recurse -Force $thuMuc
+    }
+    Chay "Tạo $(Split-Path $thuMuc -Leaf)" { & $script:pyThat -m venv --without-pip $thuMuc }
+}
+
 function DatKhoa([string]$tep, [string]$khoa, [string]$giaTri) {
     # Chỉ điền khi khóa chưa có hoặc đang trống: không ghi đè cấu hình user đã sửa.
     $dong = [System.Collections.Generic.List[string]]([IO.File]::ReadAllLines($tep, [Text.Encoding]::UTF8))
@@ -60,7 +81,11 @@ try {
     Buoc "Python 3.12 và môi trường .venv"
     $venv = Join-Path $ThuMucApp ".venv"
     $py = Join-Path $venv "Scripts\python.exe"
-    if (-not (Test-Path $py)) { Chay "Tạo .venv" { & $uv venv --python 3.12 $venv } }
+    $script:pyThat = PythonThat
+    # Dưới RedirectionGuard uv tải xong Python nhưng báo lỗi 448 khi tạo junction: bỏ qua mã lỗi, kiểm thư mục thật.
+    if (-not $script:pyThat) { & $uv python install 3.12; $script:pyThat = PythonThat }
+    if (-not $script:pyThat) { throw "Không thấy Python 3.12 trong $(Join-Path $ThuMucApp "python") sau khi tải." }
+    TaoVenv $venv
 
     Buoc "Thư viện Xưởng + CrawlTool (requirements.txt)"
     Chay "Cài requirements" { & $uv pip install --python $py -r (Join-Path $ThuMucApp "requirements.txt") }
@@ -75,7 +100,7 @@ try {
     Buoc "VieNeu (đọc giọng Việt), môi trường riêng"
     $vn = Join-Path $ThuMucApp "vieneu-env"
     $vpy = Join-Path $vn "Scripts\python.exe"
-    if (-not (Test-Path $vpy)) { Chay "Tạo vieneu-env" { & $uv venv --python 3.12 $vn } }
+    TaoVenv $vn
     Chay "Cài vieneu" { & $uv pip install --python $vpy vieneu }
 
     Buoc "FFmpeg"
