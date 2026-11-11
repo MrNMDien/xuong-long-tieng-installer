@@ -80,7 +80,7 @@ Name: "{userprograms}\Cài lại môi trường Xưởng"; Filename: "powershell
 [Run]
 ; làm mới bộ nhớ icon của Windows để Desktop/taskbar hiện logo mới ngay
 Filename: "{sys}\ie4uinit.exe"; Parameters: "-show"; Flags: runhidden nowait skipifdoesntexist
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"""; StatusMsg: "Đang cài Python, thư viện, FFmpeg, VieNeu, bộ bỏ nhạc nền (lần đầu 20–40 phút, xem cửa sổ PowerShell)..."; Flags: waituntilterminated; Check: not WizardSilent
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"""; StatusMsg: "Đang cài Python, thư viện, FFmpeg, VieNeu (lần đầu 10–30 phút, xem cửa sổ PowerShell)..."; Flags: waituntilterminated; Check: not WizardSilent
 ; Tự cập nhật (app chạy bộ cài với /VERYSILENT): cài môi trường không hỏi gì, rồi mở lại app
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\cai_dat\cai_moi_truong.ps1"" -ThuMucApp ""{app}"" -ThuMucPhim ""{code:ThuMucPhim}"" -TuDong"; Flags: waituntilterminated; Check: WizardSilent
 Filename: "{#Pyw}"; Parameters: "-m xuong app"; WorkingDir: "{app}"; Description: "Mở {#AppName}"; Flags: postinstall nowait skipifsilent
