@@ -1,5 +1,6 @@
 ﻿# Cài môi trường chạy Xưởng Lồng Tiếng sau khi bộ cài chép mã (Windows). Chạy lại được: phần đã có thì bỏ qua.
-# - Python 3.12 do uv tải (không cần cài Python hệ thống), .venv cho Xưởng + CrawlTool, vieneu-env cho VieNeu
+# - Python 3.12 do uv tải (không cần cài Python hệ thống), .venv cho Xưởng + CrawlTool, vieneu-env cho VieNeu,
+#   tach-nhac-env cho bỏ nhạc nền (PyTorch CUDA + eluate/Bandit v2)
 # - FFmpeg, Node.js (CrawlTool cần cho Douyin) qua winget nếu máy chưa có
 # - .env: tạo từ .env.example, chỉ điền XLT_MAY / XLT_DATA_DIR / VIENEU_PYTHON khi đang trống
 param(
@@ -122,6 +123,32 @@ try {
         else { $canhBao.Add("Chưa tải được Python $banCrawl cho CrawlTool: mở app bằng biểu tượng Desktop trước khi bấm Tìm phim.") }
     }
     Chay "Cài vieneu" { & $uv pip install --python $vpy vieneu }
+
+    # Phim dịch bỏ nhạc nền, giữ lời nói + tiếng động (Xưởng 0.21): Bandit v2 trong môi trường riêng. Máy đã có thì
+    # bỏ qua hẳn (không tạo lại venv). Checkpoint tiếng Trung tải từ Zenodo 12701995, kiểm SHA-256.
+    if (CoLenh "nvidia-smi") {
+        Buoc "Bỏ nhạc nền (Bandit v2), môi trường riêng"
+        $tn = Join-Path $ThuMucApp "tach-nhac-env"
+        $tpy = Join-Path $tn "Scripts\python.exe"
+        $ck = Join-Path $tn "models\checkpoint-cmn.ckpt"
+        $coSan = $false
+        if (Test-Path $tpy) { $coSan = ((& $tpy -c "import importlib.util, torch; print(bool(importlib.util.find_spec('eluate')) and torch.cuda.is_available())" 2>$null) -eq "True") }
+        if ($coSan) { Write-Host "Đã có môi trường bỏ nhạc." }
+        else {
+            TaoVenv $tn
+            Chay "Cài PyTorch CUDA (~3 GB)" { & $uv pip install --python $tpy torch torchaudio --index-url https://download.pytorch.org/whl/cu128 }
+            Chay "Cài eluate" { & $uv pip install --python $tpy "eluate==0.0.3" }
+        }
+        $shaCk = "76487231B14B56F072F16F5E9C4F7D0A3E353F89B8BD86E0BC808EC870A6B6EA"
+        if (-not (Test-Path $ck) -or (Get-FileHash $ck).Hash -ne $shaCk) {
+            New-Item -ItemType Directory -Force (Split-Path $ck) | Out-Null
+            Chay "Tải model bỏ nhạc tiếng Trung (~450 MB)" { curl.exe -fSL -o "$ck.dang" "https://zenodo.org/records/12701995/files/checkpoint-cmn.ckpt?download=1" }
+            if ((Get-FileHash "$ck.dang").Hash -ne $shaCk) { throw "Model bỏ nhạc tải về sai mã kiểm (SHA-256). Chạy lại bộ cài." }
+            Move-Item -Force "$ck.dang" $ck
+        } else { Write-Host "Đã có model bỏ nhạc." }
+    } else {
+        $canhBao.Add("Không có GPU NVIDIA: chưa cài bộ bỏ nhạc nền. Tắt ở Cài đặt > Xuất phim > Bỏ nhạc nền, nếu không bước Trộn sẽ dừng.")
+    }
 
     Buoc "FFmpeg"
     if (-not (CoLenh "ffmpeg") -or -not (CoLenh "ffprobe")) { CaiWinget "Gyan.FFmpeg" "FFmpeg" }
