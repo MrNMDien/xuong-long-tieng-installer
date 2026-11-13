@@ -93,6 +93,8 @@ Type: filesandordirs; Name: "{app}\vieneu-env"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\xuong"
 Type: filesandordirs; Name: "{app}\cai_dat"
+Type: filesandordirs; Name: "{app}\tmp"
+Type: filesandordirs; Name: "{app}\cache"
 Type: filesandordirs; Name: "{app}\uv"
 
 [Code]
